@@ -9,78 +9,67 @@ import SwiftUI
 import CoreData
 
 struct ContentView: View {
-    @Environment(\.managedObjectContext) private var viewContext
-
-    @FetchRequest(
-        sortDescriptors: [NSSortDescriptor(keyPath: \Item.timestamp, ascending: true)],
-        animation: .default)
-    private var items: FetchedResults<Item>
-
-    var body: some View {
-        NavigationView {
-            List {
-                ForEach(items) { item in
-                    NavigationLink {
-                        Text("Item at \(item.timestamp!, formatter: itemFormatter)")
-                    } label: {
-                        Text(item.timestamp!, formatter: itemFormatter)
-                    }
-                }
-                .onDelete(perform: deleteItems)
+   @StateObject var cartManager = CartManager()
+   
+   var body: some View {
+      NavigationStack {
+         VStack(alignment: .leading){
+            Home()
+               .environmentObject(cartManager)
+            
+            if cartManager.products.count > 0 {
+               NavigationLink(destination: CartView().environmentObject(cartManager), label: {
+                  HStack(spacing: 20){
+                     Text("\(cartManager.products.count)")
+                        .padding()
+                        .background(.yellow)
+                        .clipShape(Circle())
+                        .foregroundStyle(.black)
+                     
+                     VStack(alignment: .leading) {
+                        Text("Cart")
+                           .font(.system(size: 26, weight: .semibold))
+                        Text("\(cartManager.products.count) Items")
+                           .font(.system(size: 18))
+                     }
+                     Spacer()
+                     
+                     ForEach(cartManager.products.prefix(4), id: \.name) { product in
+                        Image(product.image)
+                           .resizable()
+                           .scaledToFit()
+                           .padding(8)
+                           .frame(width: 60, height: 60)
+                           .background(.white)
+                           .clipShape(Circle())
+                           .padding(.leading, -55)
+                     }
+                     if cartManager.products.count > 4 {
+                        Image(systemName: "cart.badge.plus.fill")
+                           .resizable()
+                           .scaledToFit()
+                           .padding(8)
+                           .frame(width: 60, height: 60)
+                           .background(.white)
+                           .clipShape(Circle())
+                           .padding(.leading, -60)
+                           .foregroundStyle(.yellow)
+                     }
+                  }
+                  .padding(30)
+                  .frame(width: .infinity, height: 120)
+                  .background(.black)
+                  .clipShape(.rect(topLeadingRadius: 60, topTrailingRadius: 60))
+                  .foregroundStyle(.white)
+               })
             }
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    EditButton()
-                }
-                ToolbarItem {
-                    Button(action: addItem) {
-                        Label("Add Item", systemImage: "plus")
-                    }
-                }
-            }
-            Text("Select an item")
-        }
-    }
-
-    private func addItem() {
-        withAnimation {
-            let newItem = Item(context: viewContext)
-            newItem.timestamp = Date()
-
-            do {
-                try viewContext.save()
-            } catch {
-                // Replace this implementation with code to handle the error appropriately.
-                // fatalError() causes the application to generate a crash log and terminate. You should not use this function in a shipping application, although it may be useful during development.
-                let nsError = error as NSError
-                fatalError("Unresolved error \(nsError), \(nsError.userInfo)")
-            }
-        }
-    }
-
-    private func deleteItems(offsets: IndexSet) {
-        withAnimation {
-            offsets.map { items[$0] }.forEach(viewContext.delete)
-
-            do {
-                try viewContext.save()
-            } catch {
-                // Replace this implementation with code to handle the error appropriately.
-                // fatalError() causes the application to generate a crash log and terminate. You should not use this function in a shipping application, although it may be useful during development.
-                let nsError = error as NSError
-                fatalError("Unresolved error \(nsError), \(nsError.userInfo)")
-            }
-        }
-    }
+         }
+         .ignoresSafeArea(edges: .bottom)
+      }
+   }
 }
 
-private let itemFormatter: DateFormatter = {
-    let formatter = DateFormatter()
-    formatter.dateStyle = .short
-    formatter.timeStyle = .medium
-    return formatter
-}()
-
 #Preview {
-    ContentView().environment(\.managedObjectContext, PersistenceController.preview.container.viewContext)
+   ContentView()
+      .environmentObject(CartManager())
 }
